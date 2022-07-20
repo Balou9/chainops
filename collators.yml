@@ -1,30 +1,31 @@
 AWSTemplateFormatVersion: '2010-09-09'
 #TODO
-Description: Deploy a service on AWS Fargate, hosted in a private subnet, but accessible via a public load balancer.
+Description: Collator cluster - targets eu-west-1
 
 Parameters:
-  StackName:
+  NetworkStackName:
+    Description: Networking stack name
     Type: String
-    Default: Bitcoin
-    Description: The name of the parent Fargate networking stack that you created. Necessary
-                 to locate and reference resources created by that stack.
-  ServiceName:
+
+  # ServiceName:
+  #   Description: A name for the service
+  #   Type: String
+  #   Default: node
+
+  CollatorImageUrl:
+    Description: Collator docker image
     Type: String
-    Default: node
-    Description: A name for the service
-  ImageUrl:
-    Type: String
-    Description: The url of a docker image that contains the application process that
-                 will handle the traffic for this service
+
   SSHPublicKey:
     Type: String
     Description: SSHPublicKey  
-  ServerCrt:
-    Type: String
-    Description: ServerCrt
-  ServerKey:
-    Type: String
-    Description: ServerKey
+
+  # ServerCrt:
+  #   Type: String
+  #   Description: ServerCrt
+  # ServerKey:
+  #   Type: String
+  #   Description: ServerKey
   ContainerPort:
     Type: Number
     Default: 50002
@@ -76,7 +77,7 @@ Resources:
         - Name: !Ref 'ServiceName'
           Cpu: !Ref 'ContainerCpu'
           Memory: !Ref 'ContainerMemory'
-          Image: !Ref 'ImageUrl'
+          Image: !Ref CollatorImageUrl
           PortMappings:
             - ContainerPort: !Ref 'ContainerPort'
             - ContainerPort: 50002

@@ -3,17 +3,21 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: Shared cloud networking resources - targets eu-west-1
 
 Parameters:
-  CollatorP2PPort:
-    Type: Number
-    Default: 33333
-  CollatorHTTPPort:
-    Type: Number
-    Default: 1833
-  CollatorWSPort:
-    Type: 1933
   EmbeddedRelayerP2PPort: 
     Type: Number
     Default: 33334
+
+  CollatorP2PPort:
+    Type: Number
+    Default: 33333
+
+  CollatorHTTPPort:
+    Type: Number
+    Default: 1833
+
+  CollatorWSPort:
+    Type: Number
+    Default: 1933
 
 Resources:
   VPC:
@@ -29,7 +33,7 @@ Resources:
       CidrBlock: 172.26.0.0/16
       EnableDnsSupport: true
       EnableDnsHostnames: true
-      InstanceTenancy: !Ref InstanceTenancy
+      InstanceTenancy: default # | dedicated | host
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -258,8 +262,8 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
-      - Type: forward
-        TargetGroupArn: !Ref CollatorTargetGroup
+        - Type: forward
+          TargetGroupArn: !Ref CollatorTargetGroup
       LoadBalancerArn: !Ref NetworkLoadBalancer
       Port: 22
       Protocol: TCP        
@@ -276,87 +280,51 @@ Resources:
         ToPort: '2049'
         CidrIp: 0.0.0.0/0
 
-Outputs: #TODO
-  VPC:
-    Description: A reference to the created VPC
+Outputs:
+  VpcId:
+    Description: VPC id
     Value: !Ref VPC
     Export:
-      Name: Bitcoin-VPC
+      Name: VpcId
 
-  PrivateSubnets:
-    Description: A list of the private subnets
-    Value: !Join [",", [!Ref PrivateSubnet1, !Ref PrivateSubnet2]]
-    Export:
-      Name: Bitcoin-PrivateSubnets
-
-  PrivateSubnet1:
-    Description: A reference to the private subnet in the 1st Availability Zone
+  PrivateSubnet1Id:
+    Description: Id of the private subnet in the 1st Availability Zone
     Value: !Ref PrivateSubnet1
     Export:
-      Name: Bitcoin-PrivateSubnet1
+      Name: PrivateSubnet1Id
 
-  PrivateSubnet2:
-    Description: A reference to the private subnet in the 2nd Availability Zone
+  PrivateSubnet2Id:
+    Description: Id of the private subnet in the 2nd Availability Zone
     Value: !Ref PrivateSubnet2
     Export:
-      Name: Bitcoin-PrivateSubnet2
+      Name: PrivateSubnet2Id
 
-  PublicSubnets:
-    Description: A list of the public subnets
-    Value: !Join [",", [!Ref PublicSubnet1, !Ref PublicSubnet2]]
-    Export:
-      Name: Bitcoin-PublicSubnets
-
-  PublicSubnet1:
-    Description: A reference to the public subnet in the 1st Availability Zone
+  PublicSubnet1Id:
+    Description: Id of the public subnet in the 1st Availability Zone
     Value: !Ref PublicSubnet1
     Export:
-      Name: Bitcoin-PublicSubnet1
+      Name: PublicSubnet1Id
 
-  PublicSubnet2:
-    Description: A reference to the public subnet in the 2nd Availability Zone
+  PublicSubnet2Id:
+    Description: Id of the public subnet in the 2nd Availability Zone
     Value: !Ref PublicSubnet2
     Export:
-      Name: Bitcoin-PublicSubnet2
-      
-  NLBListener:
-    Description: NLBListener
-    Value: !Ref NetworkLoadBalancerListenerElectrum
-    Export:
-      Name: Bitcoin-NLBListener
+      Name: PublicSubnet2Id
 
-  NLBTargetGroup:
-    Description: TargetGroup
-    Value: !Ref TargetGroupElectrum
+  CollatorTargetGroupArn:
+    Description: Target group id of the collators
+    Value: !Ref CollatorTargetGroup
     Export:
-      Name: Bitcoin-TargetGroup
-      
-  ECSHostSecurityGroup:
-    Description: ECSHostSecurityGroup
-    Value: !Ref ECSHostSecurityGroup
-    Export:
-      Name: Bitcoin-ECSHostSecurityGroup
+      Name: CollatorTargetGroupArn
 
-  ECSTaskExecutionRole:
-    Description: ECSTaskExecutionRole
-    Value: !Ref ECSTaskExecutionRole
+  CollatorSecurityGroupId:
+    Description: Security group for the collator nodes
+    Value: !Ref CollatorSecurityGroup
     Export:
-      Name: Bitcoin-ECSTaskExecutionRole
+      Name: CollatorSecurityGroupId
 
-  BitcoinExecutionRole:
-    Description: BitcoinExecutionRole ARN
-    Value: !GetAtt 'BitcoinExecutionRole.Arn'
+  MountTargetSecurityGroupId:
+    Description:
+    Value: !Ref MountTargetSecurityGroup
     Export:
-      Name: Bitcoin-BitcoinExecutionRole-ARN
-
-  Cluster:
-    Description: A reference to the ECS cluster
-    Value: !Ref ECSCluster
-    Export:
-      Name: Bitcoin-ECSCluster
-
-  EFS:
-    Description: A reference to EFS
-    Value: !Ref FileSystem
-    Export:
-      Name: Bitcoin-EFS
+      Name: MountTargetSecurityGroupId
