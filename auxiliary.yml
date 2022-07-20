@@ -1,0 +1,164 @@
+AWSTemplateFormatVersion: 2010-09-09
+#TODO
+Description: Shared cloud auxiliary resources - targets eu-west-1
+
+Resources:
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  BitcoinExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+  
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+        ClusterName: !Sub ${AWS::StackName}-collator      
+        
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Sub ${AWS::StackName}-log-group
+      RetentionInDays: 7
+
+  FileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      PerformanceMode: generalPurpose
+      Encrypted: true
+      LifecyclePolicies:
+        - TransitionToIA: AFTER_30_DAYS
+        - TransitionToPrimaryStorageClass: AFTER_1_ACCESS
+      FileSystemTags:
+      - Key: Name
+        Value: !Sub ${AWS::StackName}-chain-data
+  
+  MountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: FileSystem
+      SubnetId:
+        Ref: PrivateSubnet1
+      SecurityGroups:
+      - Ref: MountTargetSecurityGroup
+
+  MountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: FileSystem
+      SubnetId:
+        Ref: PrivateSubnet2
+      SecurityGroups:
+      - Ref: MountTargetSecurityGroup
+
+Outputs:
+  VPC:
+    Description: A reference to the created VPC
+    Value: !Ref VPC
+    Export:
+      Name: Bitcoin-VPC
+
+  PrivateSubnets:
+    Description: A list of the private subnets
+    Value: !Join [",", [!Ref PrivateSubnet1, !Ref PrivateSubnet2]]
+    Export:
+      Name: Bitcoin-PrivateSubnets
+
+  PrivateSubnet1:
+    Description: A reference to the private subnet in the 1st Availability Zone
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: Bitcoin-PrivateSubnet1
+
+  PrivateSubnet2:
+    Description: A reference to the private subnet in the 2nd Availability Zone
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: Bitcoin-PrivateSubnet2
+
+  PublicSubnets:
+    Description: A list of the public subnets
+    Value: !Join [",", [!Ref PublicSubnet1, !Ref PublicSubnet2]]
+    Export:
+      Name: Bitcoin-PublicSubnets
+
+  PublicSubnet1:
+    Description: A reference to the public subnet in the 1st Availability Zone
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: Bitcoin-PublicSubnet1
+
+  PublicSubnet2:
+    Description: A reference to the public subnet in the 2nd Availability Zone
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: Bitcoin-PublicSubnet2
+      
+  NLBListener:
+    Description: NLBListener
+    Value: !Ref NetworkLoadBalancerListenerElectrum
+    Export:
+      Name: Bitcoin-NLBListener
+
+  NLBTargetGroup:
+    Description: TargetGroup
+    Value: !Ref TargetGroupElectrum
+    Export:
+      Name: Bitcoin-TargetGroup
+      
+  ECSHostSecurityGroup:
+    Description: ECSHostSecurityGroup
+    Value: !Ref ECSHostSecurityGroup
+    Export:
+      Name: Bitcoin-ECSHostSecurityGroup
+
+  ECSTaskExecutionRole:
+    Description: ECSTaskExecutionRole
+    Value: !Ref ECSTaskExecutionRole
+    Export:
+      Name: Bitcoin-ECSTaskExecutionRole
+
+  BitcoinExecutionRole:
+    Description: BitcoinExecutionRole ARN
+    Value: !GetAtt 'BitcoinExecutionRole.Arn'
+    Export:
+      Name: Bitcoin-BitcoinExecutionRole-ARN
+
+  Cluster:
+    Description: A reference to the ECS cluster
+    Value: !Ref ECSCluster
+    Export:
+      Name: Bitcoin-ECSCluster
+
+  EFS:
+    Description: A reference to EFS
+    Value: !Ref FileSystem
+    Export:
+      Name: Bitcoin-EFS
