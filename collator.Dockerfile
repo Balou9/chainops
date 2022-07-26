@@ -8,7 +8,7 @@ RUN apt-get update && \
     apt-get install -y cmake pkg-config libssl-dev git clang libclang-dev
 
 RUN rustup default nightly-2022-06-16 && \
-	  rustup target add wasm32-unknown-unknown --toolchain nightly-2022-06-16
+	rustup target add wasm32-unknown-unknown --toolchain nightly-2022-06-16
 
 COPY . .
 

@@ -3,7 +3,7 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: Shared cloud networking resources - targets eu-west-1
 
 Parameters:
-  EmbeddedRelayerP2PPort: 
+  EmbeddedRelayerP2PPort:
     Type: Number
     Default: 33334
 
