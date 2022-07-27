@@ -1,27 +1,20 @@
 AWSTemplateFormatVersion: 2010-09-09
-#TODO
+
 Description: Collator cluster - targets eu-west-1
 
 Parameters:
-  # ServiceName:
-  #   Description: A name for the service
-  #   Type: String
-  #   Default: node
-
   CollatorImageUrl:
     Description: Collator docker image
     Type: String
 
-  SshPublicKey:
+  SshPublicKey: # TODO one key 4 each collator
     Type: String
     Description: SshPublicKey  
 
-  # ServerCrt:
-  #   Type: String
-  #   Description: ServerCrt
-  # ServerKey:
-  #   Type: String
-  #   Description: ServerKey
+  ServiceName:
+    Description: ECS service and task definition name
+    Type: String
+    Default: collators
 
   RelaychainNodeP2pPort:
     Description: P2P port for the embedded relaychain node
@@ -51,27 +44,23 @@ Parameters:
   ContainerMemory:
     Description: How much memory in megabytes to give the container
     Type: Number
-    Default: 16384
+    Default: 4096
 
-  ContainerCount:
+  DesiredCount:
     Description: How many copies of the service task to run
     Type: Number
-    Default: 1
-
-  ContainerRole:
-    Description: (Optional) An IAM role to give the service's containers if the code within needs to
-                access other AWS resources like S3 buckets, DynamoDB tables, etc
-    Type: String
-    Default: ""
+    Default: 2
 
 Resources:
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+        ClusterName: !Sub ${AWS::StackName}-cluster     
 
-  # The task definition. This is a simple metadata description of what
-  # container to run, and what resource requirements it has.
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: !Sub ${AWS::StackName}-task-definition
+      Family: !Ref ServiceName
       Cpu: !Ref ContainerCpu
       Memory: !Ref ContainerMemory
       NetworkMode: awsvpc
@@ -84,8 +73,7 @@ Resources:
           EFSVolumeConfiguration:
             FileSystemId: !ImportValue CollatorFileSystemId
       ContainerDefinitions:
-        # below name must be equal Self.Properties.Family
-        - Name: !Sub ${AWS::StackName}-task-definition
+        - Name: !Ref ServiceName
           Cpu: !Ref ContainerCpu
           Memory: !Ref ContainerMemory
           Image: !Ref CollatorImageUrl
@@ -101,15 +89,11 @@ Resources:
             - HardLimit: 65536
               Name: nofile
               SoftLimit: 65536
-          Environment: # TODO
+          Environment:
             - Name: AWS_DEFAULT_REGION
               Value: !Ref AWS::Region
             - Name: SSH_PUBLIC_KEY
-              Value: !Ref SshPublicKey           
-            - Name: SERVER_CRT
-              Value: !Ref 'ServerCrt'
-            - Name: SERVER_KEY
-              Value: !Ref 'ServerKey'
+              Value: !Ref SshPublicKey # TODO one key 4 each collator
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -117,36 +101,22 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: collator-node
 
-  # The service. The service is a resource which allows you to run multiple
-  # copies of a type of task, and gather up their logs and metrics, as well
-  # as monitor the number of running tasks and replace any that have crashed
   Service:
     Type: AWS::ECS::Service
     Properties:
-      ServiceName: !Ref 'ServiceName'
-      Cluster:
-        Fn::ImportValue:
-          !Join ['-', [!Ref 'StackName', 'ECSCluster']]
+      ServiceName: !Ref ServiceName
+      Cluster: !Ref Cluster
       LaunchType: FARGATE
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 75
-      DesiredCount: !Ref 'DesiredCount'
+      DesiredCount: !Ref DesiredCount
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: DISABLED
           SecurityGroups:
-            - Fn::ImportValue:
-                !Join ['-', [!Ref 'StackName', 'ECSHostSecurityGroup']]
+            - !ImportValue CollatorSecurityGroupId
           Subnets:
-            - Fn::ImportValue:
-                !Join ['-', [!Ref 'StackName', 'PrivateSubnet1']]
-            - Fn::ImportValue:
-                !Join ['-', [!Ref 'StackName', 'PrivateSubnet2']]
-      TaskDefinition: !Ref 'TaskDefinition'
-      LoadBalancers:
-        - ContainerName: !Ref 'ServiceName'
-          ContainerPort: !Ref 'ContainerPort'
-          TargetGroupArn: 
-            Fn::ImportValue:
-              !Join ['-', [!Ref 'StackName', 'TargetGroup']]
+            - !ImportValue CollatorPrivateSubnet1Id
+            - !ImportValue CollatorPrivateSubnet2Id
+      TaskDefinition: !Ref TaskDefinition

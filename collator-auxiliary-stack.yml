@@ -44,12 +44,7 @@ Resources:
       Path: /
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-  
-  Cluster:
-    Type: AWS::ECS::Cluster
-    Properties:
-        ClusterName: !Sub ${AWS::StackName}-cluster     
-        
+     
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
@@ -96,12 +91,6 @@ Outputs:
     Value: !GetAtt TaskRole.Arn
     Export:
       Name: CollatorTaskRoleArn
-
-  ClusterId:
-    Description: Id of the ECS cluster
-    Value: !Ref Cluster
-    Export:
-      Name: CollatorClusterId
 
   FileSystemId:
     Description: Id of the shared elastic file system shared within the collator cluster
