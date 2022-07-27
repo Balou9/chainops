@@ -3,19 +3,23 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: Shared cloud networking resources - targets eu-west-1
 
 Parameters:
-  EmbeddedRelayerP2PPort:
+  RelaychainNodeP2pPort:
+    Description: P2P port for the embedded relaychain node
     Type: Number
     Default: 33334
 
-  CollatorP2PPort:
+  CollatorP2pPort:
+    Description: P2P port for the collator itself
     Type: Number
     Default: 33333
 
-  CollatorHTTPPort:
+  CollatorHttpPort:
+    Description: HTTP RPC port for the collator
     Type: Number
     Default: 1833
 
-  CollatorWSPort:
+  CollatorWsPort:
+    Description: WS RPC port for the collator
     Type: Number
     Default: 1933
 
@@ -201,26 +205,26 @@ Resources:
         - Description: !Sub ${AWS::StackName}-security-group-ingress-collator-p2p
           CidrIp: 0.0.0.0/0
           IpProtocol: tcp
-          FromPort: !Ref CollatorP2PPort
-          ToPort: !Ref CollatorP2PPort
+          FromPort: !Ref CollatorP2pPort
+          ToPort: !Ref CollatorP2pPort
 
         - Description: !Sub ${AWS::StackName}-security-group-ingress-collator-http
           CidrIp: 0.0.0.0/0
           IpProtocol: tcp
-          FromPort: !Ref CollatorHTTPPort
-          ToPort: !Ref CollatorHTTPPort
+          FromPort: !Ref CollatorHttpPort
+          ToPort: !Ref CollatorHttpPort
 
         - Description: !Sub ${AWS::StackName}-security-group-ingress-collator-ws
           CidrIp: 0.0.0.0/0
           IpProtocol: tcp
-          FromPort: !Ref CollatorWSPort
-          ToPort: !Ref CollatorWSPort
+          FromPort: !Ref CollatorWsPort
+          ToPort: !Ref CollatorWsPort
 
         - Description: !Sub ${AWS::StackName}-security-group-ingress-embedded-relayer-p2p
           CidrIp: 0.0.0.0/0
           IpProtocol: tcp
-          FromPort: !Ref EmbeddedRelayerP2PPort
-          ToPort: !Ref EmbeddedRelayerP2PPort
+          FromPort: !Ref RelaychainNodeP2pPort
+          ToPort: !Ref RelaychainNodeP2pPort
 
       SecurityGroupEgress:
         - Description: !Sub ${AWS::StackName}-security-group-egress-all
@@ -291,25 +295,25 @@ Outputs:
     Description: Id of the private subnet in the 1st Availability Zone
     Value: !Ref PrivateSubnet1
     Export:
-      Name: PrivateSubnet1Id
+      Name: CollatorPrivateSubnet1Id
 
   PrivateSubnet2Id:
     Description: Id of the private subnet in the 2nd Availability Zone
     Value: !Ref PrivateSubnet2
     Export:
-      Name: PrivateSubnet2Id
+      Name: CollatorPrivateSubnet2Id
 
   PublicSubnet1Id:
     Description: Id of the public subnet in the 1st Availability Zone
     Value: !Ref PublicSubnet1
     Export:
-      Name: PublicSubnet1Id
+      Name: CollatorPublicSubnet1Id
 
   PublicSubnet2Id:
     Description: Id of the public subnet in the 2nd Availability Zone
     Value: !Ref PublicSubnet2
     Export:
-      Name: PublicSubnet2Id
+      Name: CollatorPublicSubnet2Id
 
   CollatorTargetGroupArn:
     Description: Target group id of the collators
@@ -327,4 +331,4 @@ Outputs:
     Description:
     Value: !Ref MountTargetSecurityGroup
     Export:
-      Name: MountTargetSecurityGroupId
+      Name: CollatorMountTargetSecurityGroupId

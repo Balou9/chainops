@@ -1,0 +1,108 @@
+name: cd
+
+on:
+  push:
+    branches:
+      - test # deploys to the aws test account
+      - main # deploys to the aws prod account
+
+# requires manually setting github repo secrets:
+#   - AWS_ACCESS_KEY_ID_PROD
+#   - AWS_SECRET_ACCESS_KEY_PROD
+#   - AWS_ACCESS_KEY_ID_TEST
+#   - AWS_SECRET_ACCESS_KEY_TEST
+
+env: # primary configuration touchpoint
+  AWS_REGION: eu-west-1 # ireland
+  CFN_TEMPLATES: "collator-setup-stack.yml\ncollator-network-stack.yml\ncollator-auxiliary-stack.yml\ncollator-core-stack.yml\n"
+  RELAY_CHAIN_NODE_P2P_PORT: 33334
+  COLLATOR_P2P_PORT: 33333
+  COLLATOR_HTTP_PORT: 1833
+  COLLATOR_WS_PORT: 1933
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: configure the environment according to the current branch
+        run: |
+          if [[ ${{ github.ref }} == *main ]]; then
+            echo "ENVIRONMENT=prod" >> $GITHUB_ENV
+            echo "NETWORK_STACK_NAME=prod-collator-network" >> $GITHUB_ENV
+            echo "AUXILIARY_STACK_NAME=prod-collator-auxiliary" >> $GITHUB_ENV
+            echo "COLLATOR_STACK_NAME=prod-collator-core" >> $GITHUB_ENV
+            printf \
+              "[default]\naws_access_key_id=%s\naws_secret_access_key=%s\n" \
+              ${{ secrets.AWS_ACCESS_KEY_ID_PROD }} \
+              ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }} \
+            > $HOME/.aws/credentials
+          else
+            echo "ENVIRONMENT=test" >> $GITHUB_ENV
+            echo "NETWORK_STACK_NAME=test-collator-network" >> $GITHUB_ENV
+            echo "AUXILIARY_STACK_NAME=test-collator-auxiliary" >> $GITHUB_ENV
+            echo "COLLATOR_STACK_NAME=test-collator-core" >> $GITHUB_ENV
+            printf \
+              "[default]\naws_access_key_id=%s\naws_secret_access_key=%s\n" \
+              ${{ secrets.AWS_ACCESS_KEY_ID_TEST }} \
+              ${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }} \
+            > $HOME/.aws/credentials
+          fi
+
+      - uses: tj-actions/changed-files@v25
+        id: changed-files
+
+      - name: validate all cloudformation templates
+        if: contains(steps.changed-files.outputs.all_changed_files, '-stack.yml')
+        run: |
+          printf "${{ env.CFN_TEMPLATES }}" | while read template; do
+            aws cloudformation validate-template \
+              --template-body="file://$template"
+          done
+
+      - name: deploy the network stack
+        if: contains(steps.changed-files.outputs.all_changed_files, 'network-stack.yml')
+        run: |
+          aws cloudformation deploy \
+            --stack-name=${{ env.NETWORK_STACK_NAME }} \
+            --template-file=./network-stack.yml \
+            --parameter-overrides \
+              RelaychainNodeP2pPort=${{ env.RELAY_CHAIN_NODE_P2P_PORT }} \
+              CollatorP2pPort=${{ env.COLLATOR_P2P_PORT }} \
+              CollatorHttpPort=${{ env.COLLATOR_HTTP_PORT }} \
+              CollatorWsPort=${{ env.COLLATOR_WS_PORT }} \
+            --capabilities=CAPABILITY_IAM \
+            --no-fail-on-empty-changeset
+
+      - name: deploy the auxiliary stack
+        if: contains(steps.changed-files.outputs.all_changed_files, 'auxiliary-stack.yml')
+        run: |
+          aws cloudformation deploy \
+            --stack-name=${{ env.AUXILIARY_STACK_NAME }} \
+            --template-file=./auxiliary-stack.yml \
+            --parameter-overrides \
+              PrivateSubnet1Id=${{ TODO }} \
+              PrivateSubnet2Id=${{ TODO }} \
+              MountTargetSecurityGroupId=${{ TODO }} \
+            --capabilities=CAPABILITY_IAM \
+            --no-fail-on-empty-changeset
+  
+        # run: |
+        #   aws cloudformation deploy \
+        #     --stack-name=${{ env.STACK_NAME }} \
+        #     --template-file=./stack.yml \
+        #     --parameter-overrides \
+        #       Environment=${{ env.ENVIRONMENT }} \
+        #       Domain=${{ env.DOMAIN }} \
+        #       HostedZoneId=${{ secrets.HOSTED_ZONE_ID }} \
+        #       CertificateArn=${{ secrets.CERTIFICATE_ARN }} \
+        #       CdnDefaultTtl=${{ env.CDN_DEFAULT_TTL }} \
+        #       CdnMaxTtl=${{ env.CDN_MAX_TTL }} \
+        #       CdnMinTtl=${{ env.CDN_MIN_TTL }} \
+        #       CdnDefaultRootObject=${{ env.CDN_DEFAULT_ROOT_OBJECT }} \
+        #       PseudoRandomness=$(tr -dc 'a-f0-9' < /dev/urandom | head -c16) \
+        #     --capabilities=CAPABILITY_IAM \
+        #     --no-fail-on-empty-changeset

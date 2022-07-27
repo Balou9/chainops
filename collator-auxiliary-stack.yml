@@ -89,28 +89,34 @@ Outputs:
     Description: Execution role ARN for ECS tasks
     Value: !GetAtt ExecutionRole.Arn
     Export:
-      Name: ExecutionRoleArn
+      Name: CollatorExecutionRoleArn
 
   TaskRoleArn:
     Description: ECS task role ARN
     Value: !GetAtt TaskRole.Arn
     Export:
-      Name: TaskRoleArn
+      Name: CollatorTaskRoleArn
 
   ClusterId:
     Description: Id of the ECS cluster
     Value: !Ref Cluster
     Export:
-      Name: ClusterId
+      Name: CollatorClusterId
+
+  FileSystemId:
+    Description: Id of the shared elastic file system shared within the collator cluster
+    Value: !Ref FileSystem
+    Export:
+      Name: CollatorFileSystemId
 
   MountTarget1Id:
     Description: EFS mount target 1 id
     Value: !Ref MountTarget1
     Export:
-      Name: MountTarget1Id
+      Name: CollatorMountTarget1Id
 
   MountTarget2Id:
     Description: EFS mount target 2 id
     Value: !Ref MountTarget2
     Export:
-      Name: MountTarget2Id
+      Name: CollatorMountTarget2Id

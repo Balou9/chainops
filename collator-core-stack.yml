@@ -1,12 +1,8 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: 2010-09-09
 #TODO
 Description: Collator cluster - targets eu-west-1
 
 Parameters:
-  NetworkStackName:
-    Description: Networking stack name
-    Type: String
-
   # ServiceName:
   #   Description: A name for the service
   #   Type: String
@@ -16,9 +12,9 @@ Parameters:
     Description: Collator docker image
     Type: String
 
-  SSHPublicKey:
+  SshPublicKey:
     Type: String
-    Description: SSHPublicKey  
+    Description: SshPublicKey  
 
   # ServerCrt:
   #   Type: String
@@ -26,27 +22,47 @@ Parameters:
   # ServerKey:
   #   Type: String
   #   Description: ServerKey
-  ContainerPort:
+
+  RelaychainNodeP2pPort:
+    Description: P2P port for the embedded relaychain node
     Type: Number
-    Default: 50002
-    Description: What port number the application inside the docker container is binding to
+    Default: 33334
+
+  CollatorP2pPort:
+    Description: P2P port for the collator itself
+    Type: Number
+    Default: 33333
+
+  CollatorHttpPort:
+    Description: HTTP RPC port for the collator
+    Type: Number
+    Default: 1833
+
+  CollatorWsPort:
+    Description: WS RPC port for the collator
+    Type: Number
+    Default: 1933
+
   ContainerCpu:
+    Description: How much CPU to give the container. 1024 is 1 CPU
     Type: Number
     Default: 2048
-    Description: How much CPU to give the container. 1024 is 1 CPU
+
   ContainerMemory:
+    Description: How much memory in megabytes to give the container
     Type: Number
     Default: 16384
-    Description: How much memory in megabytes to give the container
-  DesiredCount:
+
+  ContainerCount:
+    Description: How many copies of the service task to run
     Type: Number
     Default: 1
-    Description: How many copies of the service task to run
-  Role:
+
+  ContainerRole:
+    Description: (Optional) An IAM role to give the service's containers if the code within needs to
+                access other AWS resources like S3 buckets, DynamoDB tables, etc
     Type: String
     Default: ""
-    Description: (Optional) An IAM role to give the service's containers if the code within needs to
-                 access other AWS resources like S3 buckets, DynamoDB tables, etc
 
 Resources:
 
@@ -55,54 +71,51 @@ Resources:
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: !Ref 'ServiceName'
-      Cpu: !Ref 'ContainerCpu'
-      Memory: !Ref 'ContainerMemory'
+      Family: !Sub ${AWS::StackName}-task-definition
+      Cpu: !Ref ContainerCpu
+      Memory: !Ref ContainerMemory
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
-      ExecutionRoleArn:
-        Fn::ImportValue:
-          !Join ['-', [!Ref 'StackName', 'ECSTaskExecutionRole']]
-      TaskRoleArn:
-        Fn::ImportValue:
-          !Join ['-', [!Ref 'StackName', 'BitcoinExecutionRole-ARN']]
+      ExecutionRoleArn:  !ImportValue CollatorExecutionRole
+      TaskRoleArn: !ImportValue CollatorTaskRole
       Volumes:
         - Name: efsdata
           EFSVolumeConfiguration:
-            FileSystemId:
-              Fn::ImportValue:
-                !Join ['-', [!Ref 'StackName', 'EFS']]
+            FileSystemId: !ImportValue CollatorFileSystemId
       ContainerDefinitions:
-        - Name: !Ref 'ServiceName'
-          Cpu: !Ref 'ContainerCpu'
-          Memory: !Ref 'ContainerMemory'
+        # below name must be equal Self.Properties.Family
+        - Name: !Sub ${AWS::StackName}-task-definition
+          Cpu: !Ref ContainerCpu
+          Memory: !Ref ContainerMemory
           Image: !Ref CollatorImageUrl
           PortMappings:
-            - ContainerPort: !Ref 'ContainerPort'
-            - ContainerPort: 50002
+            - ContainerPort: !Ref RelaychainNodeP2pPort
+            - ContainerPort: !Ref CollatorP2pPort
+            - ContainerPort: !Ref CollatorHttpPort
+            - ContainerPort: !Ref CollatorWsPort
           MountPoints:
-            - ContainerPath: /root/bitcoin_data
+            - ContainerPath: /data
               SourceVolume: efsdata
           Ulimits:
             - HardLimit: 65536
               Name: nofile
               SoftLimit: 65536
-          Environment:
+          Environment: # TODO
             - Name: AWS_DEFAULT_REGION
-              Value: !Ref 'AWS::Region'
+              Value: !Ref AWS::Region
             - Name: SSH_PUBLIC_KEY
-              Value: !Ref 'SSHPublicKey'              
+              Value: !Ref SshPublicKey           
             - Name: SERVER_CRT
               Value: !Ref 'ServerCrt'
             - Name: SERVER_KEY
               Value: !Ref 'ServerKey'
           LogConfiguration:
-            LogDriver: 'awslogs'
+            LogDriver: awslogs
             Options:
-              awslogs-group: bitcoin
-              awslogs-region: !Ref 'AWS::Region'
-              awslogs-stream-prefix: bitcoin_node
+              awslogs-group: collators
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: collator-node
 
   # The service. The service is a resource which allows you to run multiple
   # copies of a type of task, and gather up their logs and metrics, as well
