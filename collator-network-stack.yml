@@ -189,7 +189,19 @@ Resources:
     Properties:
       RouteTableId: !Ref PrivateRouteTable2
       SubnetId: !Ref PrivateSubnet2
-  
+
+  NetworkLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      LoadBalancerAttributes:
+        - Key: load_balancing.cross_zone.enabled
+          Value: true
+      Scheme: internet-facing
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      Type: network
+  #############################################################################
   CollatorSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -232,18 +244,6 @@ Resources:
           IpProtocol: "-1"
           FromPort: 0
           ToPort: 0
-
-  NetworkLoadBalancer:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      LoadBalancerAttributes:
-        - Key: load_balancing.cross_zone.enabled
-          Value: true
-      Scheme: internet-facing
-      Subnets:
-        - !Ref PublicSubnet1
-        - !Ref PublicSubnet2
-      Type: network
 
   CollatorTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup

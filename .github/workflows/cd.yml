@@ -14,7 +14,7 @@ on:
 
 env: # primary configuration touchpoint
   AWS_REGION: eu-west-1 # ireland
-  CFN_TEMPLATES: "collator-setup-stack.yml\ncollator-network-stack.yml\ncollator-auxiliary-stack.yml\ncollator-core-stack.yml\n"
+  CFN_TEMPLATES: "core-network-stack.yml\ncollator-setup-stack.yml\ncollator-network-stack.yml\ncollator-auxiliary-stack.yml\ncollator-core-stack.yml\ncollator-monitoring-stack.yml\n"
   RELAY_CHAIN_NODE_P2P_PORT: 33334
   COLLATOR_P2P_PORT: 33333
   COLLATOR_HTTP_PORT: 1833
@@ -62,7 +62,7 @@ jobs:
             aws cloudformation validate-template \
               --template-body="file://$template"
           done
-
+      #TODO: push docker image to ecr
       - name: deploy the network stack
         if: contains(steps.changed-files.outputs.all_changed_files, 'network-stack.yml')
         run: |

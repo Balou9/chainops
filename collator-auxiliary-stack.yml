@@ -44,7 +44,7 @@ Resources:
       Path: /
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-     
+
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
