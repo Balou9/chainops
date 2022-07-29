@@ -6,11 +6,17 @@ on:
       - test # deploys to the aws test account
       - main # deploys to the aws prod account
 
+# TODO: add a workflow dispatch trigger listening to git tags on t3rn
+#       if triggered by a tag set it as the docker image tag also
+
 # requires manually setting github repo secrets:
 #   - AWS_ACCESS_KEY_ID_PROD
 #   - AWS_SECRET_ACCESS_KEY_PROD
 #   - AWS_ACCESS_KEY_ID_TEST
 #   - AWS_SECRET_ACCESS_KEY_TEST
+#   - DOCKERHUB_USERNAME
+#   - DOCKERHUB_TOKEN
+#   - GITHUB_PERSONAL_ACCESS_TOKEN
 
 env: # primary configuration touchpoint
   AWS_REGION: eu-west-1 # ireland
@@ -21,14 +27,52 @@ env: # primary configuration touchpoint
   COLLATOR_WS_PORT: 1933
 
 jobs:
-  deploy:
+  publish-docker-image:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 2
+          path: chainops
 
-      - name: configure the environment according to the current branch
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_PERSONAL_ACCESS_TOKEN }}
+          repository: t3rn/t3rn
+          path: t3rn
+
+      #TODO: derive tag
+      - name: Derive the Docker image tag and its URL
+        run: |
+          echo TODO
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and publish the Docker image
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: t3rn/circuit-collator:latest
+          platforms: linux/amd64
+          file: collator.Dockerfile
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+
+  deploy-collators:
+    runs-on: ubuntu-22.04
+    needs: publish-docker-image
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Configure the environment according to the current branch
         run: |
           if [[ ${{ github.ref }} == *main ]]; then
             echo "ENVIRONMENT=prod" >> $GITHUB_ENV
@@ -52,18 +96,19 @@ jobs:
             > $HOME/.aws/credentials
           fi
 
-      - uses: tj-actions/changed-files@v25
+      - name: Detect changed files
+        uses: tj-actions/changed-files@v25
         id: changed-files
 
-      - name: validate all cloudformation templates
+      - name: Validate all CloudFormation templates
         if: contains(steps.changed-files.outputs.all_changed_files, '-stack.yml')
         run: |
           printf "${{ env.CFN_TEMPLATES }}" | while read template; do
             aws cloudformation validate-template \
               --template-body="file://$template"
           done
-      #TODO: push docker image to ecr
-      - name: deploy the network stack
+  
+      - name: Deploy the network stack
         if: contains(steps.changed-files.outputs.all_changed_files, 'network-stack.yml')
         run: |
           aws cloudformation deploy \
@@ -77,7 +122,7 @@ jobs:
             --capabilities=CAPABILITY_IAM \
             --no-fail-on-empty-changeset
 
-      - name: deploy the auxiliary stack
+      - name: Deploy the auxiliary stack
         if: contains(steps.changed-files.outputs.all_changed_files, 'auxiliary-stack.yml')
         run: |
           aws cloudformation deploy \
