@@ -5,6 +5,7 @@ on:
     branches:
       - test # deploys to the aws test account
       - main # deploys to the aws prod account
+  repository_dispatch:
 
 # TODO: add a workflow dispatch trigger listening to git tags on t3rn
 #       if triggered by a tag set it as the docker image tag also
@@ -27,43 +28,6 @@ env: # primary configuration touchpoint
   COLLATOR_WS_PORT: 1933
 
 jobs:
-  publish-docker-image:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 2
-          path: chainops
-
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          token: ${{ secrets.GITHUB_PERSONAL_ACCESS_TOKEN }}
-          repository: t3rn/t3rn
-          path: t3rn
-
-      #TODO: derive tag
-      - name: Derive the Docker image tag and its URL
-        run: |
-          echo TODO
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and publish the Docker image
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          push: true
-          tags: t3rn/circuit-collator:latest
-          platforms: linux/amd64
-          file: collator.Dockerfile
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-
   deploy-collators:
     runs-on: ubuntu-22.04
     needs: publish-docker-image
@@ -107,7 +71,7 @@ jobs:
             aws cloudformation validate-template \
               --template-body="file://$template"
           done
-  
+
       - name: Deploy the network stack
         if: contains(steps.changed-files.outputs.all_changed_files, 'network-stack.yml')
         run: |
