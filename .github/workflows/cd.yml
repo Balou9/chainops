@@ -1,15 +1,5 @@
 name: cd
 
-on:
-  push:
-    branches:
-      - test # deploys to the aws test account
-      - main # deploys to the aws prod account
-  repository_dispatch:
-
-# TODO: add a workflow dispatch trigger listening to git tags on t3rn
-#       if triggered by a tag set it as the docker image tag also
-
 # requires manually setting github repo secrets:
 #   - AWS_ACCESS_KEY_ID_PROD
 #   - AWS_SECRET_ACCESS_KEY_PROD
@@ -18,14 +8,27 @@ on:
 #   - DOCKERHUB_USERNAME
 #   - DOCKERHUB_TOKEN
 #   - GITHUB_PERSONAL_ACCESS_TOKEN
+#   - SSH_PUBLIC_KEY # TODO one key 4 each collator
+
+on:
+  push:
+    branches:
+      - test # deploys to the aws test account
+      # - main # deploys to the aws prod account
+  repository_dispatch: # catches cross repo triggers
 
 env: # primary configuration touchpoint
   AWS_REGION: eu-west-1 # ireland
   CFN_TEMPLATES: "core-network-stack.yml\ncollator-setup-stack.yml\ncollator-network-stack.yml\ncollator-storage-stack.yml\ncollator-core-stack.yml\ncollator-monitoring-stack.yml\n"
+  SERVICE_NAME: collators
+  COLLATOR_IMAGE_URL: TODO
   RELAY_CHAIN_NODE_P2P_PORT: 33334
   COLLATOR_P2P_PORT: 33333
   COLLATOR_HTTP_PORT: 1833
   COLLATOR_WS_PORT: 1933
+  CONTAINER_CPU_UNITS: 4096
+  CONTAINER_MEMORY_MIB: 8192
+  DESIRED_COUNT: 2
 
 jobs:
   deploy-collators:
@@ -72,46 +75,42 @@ jobs:
               --template-body="file://$template"
           done
 
-      - name: Deploy the network stack
-        if: contains(steps.changed-files.outputs.all_changed_files, 'network-stack.yml')
+      - name: Deploy the collator network stack
+        if: contains(steps.changed-files.outputs.all_changed_files, 'collator-network-stack.yml')
         run: |
           aws cloudformation deploy \
             --stack-name=${{ env.NETWORK_STACK_NAME }} \
-            --template-file=./network-stack.yml \
+            --template-file=./collator-network-stack.yml \
             --parameter-overrides \
               RelaychainNodeP2pPort=${{ env.RELAY_CHAIN_NODE_P2P_PORT }} \
               CollatorP2pPort=${{ env.COLLATOR_P2P_PORT }} \
               CollatorHttpPort=${{ env.COLLATOR_HTTP_PORT }} \
               CollatorWsPort=${{ env.COLLATOR_WS_PORT }} \
-            --capabilities=CAPABILITY_IAM \
             --no-fail-on-empty-changeset
 
-      - name: Deploy the storage stack
-        if: contains(steps.changed-files.outputs.all_changed_files, 'storage-stack.yml')
+      - name: Deploy the collator storage stack
+        if: contains(steps.changed-files.outputs.all_changed_files, 'collator-storage-stack.yml')
         run: |
           aws cloudformation deploy \
             --stack-name=${{ env.STORAGE_STACK_NAME }} \
-            --template-file=./storage-stack.yml \
+            --template-file=./collator-storage-stack.yml \
+            --no-fail-on-empty-changeset
+
+      - name: Deploy the collator core stack
+        if: contains(steps.changed-files.outputs.all_changed_files, 'collator-core-stack.yml')
+        run: |
+          aws cloudformation deploy \
+            --stack-name=${{ env.COLLATOR_STACK_NAME }} \
+            --template-file=./collator-core-stack.yml \
             --parameter-overrides \
-              PrivateSubnet1Id=${{ TODO }} \
-              PrivateSubnet2Id=${{ TODO }} \
-              MountTargetSecurityGroupId=${{ TODO }} \
+              CollatorImageUrl=${{ env.COLLATOR_IMAGE_URL }} \
+              ServiceName=${{ env.SERVICE_NAME }} \
+              SshPublicKey=${{ secrets.SSH_PUBLIC_KEY }} \
+              RelaychainNodeP2pPort=${{ env.RELAYCHAIN_NODE_P2P_PORT }} \
+              CollatorP2pPort=${{ env.COLLATOR_P2P_PORT }} \
+              CollatorHttpPort=${{ env.COLLATOR_HTTP_PORT }} \
+              CollatorWsPort=${{ env.COLLATOR_WS_PORT }} \
+              ContainerCpu=${{ env.CONTAINER_CPU_UNITS }} \
+              DesiredCount=${{ env.DESIRED_COUNT }} \
             --capabilities=CAPABILITY_IAM \
             --no-fail-on-empty-changeset
-  
-        # run: |
-        #   aws cloudformation deploy \
-        #     --stack-name=${{ env.STACK_NAME }} \
-        #     --template-file=./stack.yml \
-        #     --parameter-overrides \
-        #       Environment=${{ env.ENVIRONMENT }} \
-        #       Domain=${{ env.DOMAIN }} \
-        #       HostedZoneId=${{ secrets.HOSTED_ZONE_ID }} \
-        #       CertificateArn=${{ secrets.CERTIFICATE_ARN }} \
-        #       CdnDefaultTtl=${{ env.CDN_DEFAULT_TTL }} \
-        #       CdnMaxTtl=${{ env.CDN_MAX_TTL }} \
-        #       CdnMinTtl=${{ env.CDN_MIN_TTL }} \
-        #       CdnDefaultRootObject=${{ env.CDN_DEFAULT_ROOT_OBJECT }} \
-        #       PseudoRandomness=$(tr -dc 'a-f0-9' < /dev/urandom | head -c16) \
-        #     --capabilities=CAPABILITY_IAM \
-        #     --no-fail-on-empty-changeset

@@ -39,12 +39,12 @@ Parameters:
   ContainerCpu:
     Description: How much CPU to give the container. 1024 is 1 CPU
     Type: Number
-    Default: 2048
+    Default: 4096
 
   ContainerMemory:
     Description: How much memory in megabytes to give the container
     Type: Number
-    Default: 4096
+    Default: 8192
 
   DesiredCount:
     Description: How many copies of the service task to run
