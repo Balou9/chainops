@@ -19,9 +19,26 @@ Deployments are automated and executed within Github Actions according to the re
 | push    | chainops | main   | aws-prod#715320985461   | aws-prod-cd-runner  |
 | tag     | t3rn     |   -    | aws-prod#715320985461   | aws-prod-cd-runner  |
 
+## Configuration
+
+The primary configuration touchpoint is intended to be the Github Actions environment. Therefore, all stack parameters are initialized as env vars in the `env` block of [the `cd` workflow](.github/workflows/cd.yml) and should ideally be tweaked there.
+
+Secret parameters should be set as GitHub repo secrets, currently the required secrets are:
+
++ AWS_ACCESS_KEY_ID_PROD
++ AWS_SECRET_ACCESS_KEY_PROD
++ AWS_ACCESS_KEY_ID_TEST
++ AWS_SECRET_ACCESS_KEY_TEST
++ DOCKERHUB_USERNAME
++ DOCKERHUB_TOKEN
++ GITHUB_PERSONAL_ACCESS_TOKEN
++ SSH_PUBLIC_KEY #TODO one key 4 each collator
+
+The security credentials are the ones of the aws-test-cd-runner/aws-prod-cd-runner deployment identity respectively.
+
 ## Stacks
 
-
+All infrastructure resources are logically grouped into separate stacks enabling a modular and layered architecture.
 
 ### `core-network-stack`
 

@@ -7,7 +7,7 @@ Parameters:
     Description: Collator docker image
     Type: String
 
-  SshPublicKey: # TODO one key 4 each collator
+  SshPublicKey: #TODO one key 4 each collator
     Type: String
     Description: SshPublicKey  
 
@@ -125,7 +125,7 @@ Resources:
             - Name: AWS_DEFAULT_REGION
               Value: !Ref AWS::Region
             - Name: SSH_PUBLIC_KEY
-              Value: !Ref SshPublicKey # TODO one key 4 each collator
+              Value: !Ref SshPublicKey #TODO one key 4 each collator
           LogConfiguration:
             LogDriver: awslogs
             Options:

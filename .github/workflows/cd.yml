@@ -1,15 +1,5 @@
 name: cd
 
-# requires manually setting github repo secrets:
-#   - AWS_ACCESS_KEY_ID_PROD
-#   - AWS_SECRET_ACCESS_KEY_PROD
-#   - AWS_ACCESS_KEY_ID_TEST
-#   - AWS_SECRET_ACCESS_KEY_TEST
-#   - DOCKERHUB_USERNAME
-#   - DOCKERHUB_TOKEN
-#   - GITHUB_PERSONAL_ACCESS_TOKEN
-#   - SSH_PUBLIC_KEY # TODO one key 4 each collator
-
 on:
   push:
     branches:
@@ -20,15 +10,15 @@ on:
 env: # primary configuration touchpoint
   AWS_REGION: eu-west-1 # ireland
   CFN_TEMPLATES: "core-network-stack.yml\ncollator-setup-stack.yml\ncollator-network-stack.yml\ncollator-storage-stack.yml\ncollator-core-stack.yml\ncollator-monitoring-stack.yml\n"
-  SERVICE_NAME: collators
+  COLLATOR_SERVICE_NAME: collators
   COLLATOR_IMAGE_URL: TODO
   RELAY_CHAIN_NODE_P2P_PORT: 33334
   COLLATOR_P2P_PORT: 33333
   COLLATOR_HTTP_PORT: 1833
   COLLATOR_WS_PORT: 1933
-  CONTAINER_CPU_UNITS: 4096
-  CONTAINER_MEMORY_MIB: 8192
-  DESIRED_COUNT: 2
+  COLLATOR_CONTAINER_CPU_UNITS: 4096
+  COLLATOR_CONTAINER_MEMORY_MIB: 8192
+  COLLATOR_DESIRED_COUNT: 2
 
 jobs:
   deploy-collators:
@@ -104,13 +94,13 @@ jobs:
             --template-file=./collator-core-stack.yml \
             --parameter-overrides \
               CollatorImageUrl=${{ env.COLLATOR_IMAGE_URL }} \
-              ServiceName=${{ env.SERVICE_NAME }} \
+              ServiceName=${{ env.COLLATOR_SERVICE_NAME }} \
               SshPublicKey=${{ secrets.SSH_PUBLIC_KEY }} \
               RelaychainNodeP2pPort=${{ env.RELAYCHAIN_NODE_P2P_PORT }} \
               CollatorP2pPort=${{ env.COLLATOR_P2P_PORT }} \
               CollatorHttpPort=${{ env.COLLATOR_HTTP_PORT }} \
               CollatorWsPort=${{ env.COLLATOR_WS_PORT }} \
-              ContainerCpu=${{ env.CONTAINER_CPU_UNITS }} \
-              DesiredCount=${{ env.DESIRED_COUNT }} \
+              ContainerCpu=${{ env.COLLATOR_CONTAINER_CPU_UNITS }} \
+              DesiredCount=${{ env.COLLATOR_DESIRED_COUNT }} \
             --capabilities=CAPABILITY_IAM \
             --no-fail-on-empty-changeset
