@@ -52,6 +52,38 @@ Parameters:
     Default: 2
 
 Resources:
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
   Cluster:
     Type: AWS::ECS::Cluster
     Properties:
@@ -66,8 +98,8 @@ Resources:
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
-      ExecutionRoleArn:  !ImportValue CollatorExecutionRole
-      TaskRoleArn: !ImportValue CollatorTaskRole
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
       Volumes:
         - Name: efsdata
           EFSVolumeConfiguration:
@@ -117,6 +149,12 @@ Resources:
           SecurityGroups:
             - !ImportValue CollatorSecurityGroupId
           Subnets:
-            - !ImportValue CollatorPrivateSubnet1Id
-            - !ImportValue CollatorPrivateSubnet2Id
+            - !ImportValue PrivateSubnet1Id
+            - !ImportValue PrivateSubnet2Id
       TaskDefinition: !Ref TaskDefinition
+      LoadBalancers:
+        - ContainerName: !Ref ServiceName
+          ContainerPort: !Ref CollatorHttpPort
+          TargetGroupArn:
+            Fn::ImportValue:
+              CollatorTargetGroupArn

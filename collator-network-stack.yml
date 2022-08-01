@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-Description: Shared cloud networking resources - targets eu-west-1
+Description: Collator cloud networking resources - targets eu-west-1
 
 Parameters:
   RelaychainNodeP2pPort:
@@ -24,184 +24,6 @@ Parameters:
     Default: 1933
 
 Resources:
-  VPC:
-    Type: AWS::EC2::VPC
-    Properties:
-      # NOTE: slicable into 6 subnets
-      # 172.26.0.0/19
-      # 172.26.32.0/19
-      # 172.26.64.0/19
-      # 172.26.96.0/19
-      # 172.26.128.0/19
-      # 172.26.160.0/19
-      CidrBlock: 172.26.0.0/16
-      EnableDnsSupport: true
-      EnableDnsHostnames: true
-      InstanceTenancy: default # | dedicated | host
-
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-    Properties:
-      Tags:
-        - Key: Name
-          Value: ${AWS::StackName}-internet-gateway
-
-  InternetGatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      InternetGatewayId: !Ref InternetGateway
-      VpcId: !Ref VPC
-
-  PublicSubnet1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: eu-west-1a
-      CidrBlock: 172.26.0.0/19
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-public-subnet-eu-west-1a
-
-  PublicSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: eu-west-1b
-      CidrBlock: 172.26.32.0/19
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-public-subnet-eu-west-1b
-
-  PrivateSubnet1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: eu-west-1a
-      CidrBlock: 172.26.64.0/19
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-private-subnet-eu-west-1a
-
-  PrivateSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      AvailabilityZone: eu-west-1b
-      CidrBlock: 172.26.96.0/19
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-private-subnet-eu-west-1b
-
-  NatGateway1EIP:
-    Type: AWS::EC2::EIP
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      Domain: vpc
-
-  NatGateway2EIP:
-    Type: AWS::EC2::EIP
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      Domain: vpc
-
-  NatGateway1:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatGateway1EIP.AllocationId
-      SubnetId: !Ref PublicSubnet1
-
-  NatGateway2:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatGateway2EIP.AllocationId
-      SubnetId: !Ref PublicSubnet2
-
-  PublicRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-public-route-table
-
-  DefaultPublicRoute:
-    Type: AWS::EC2::Route
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-
-  PublicSubnet1RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet1
-
-  PublicSubnet2RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet2
-
-  PrivateRouteTable1:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-private-route-table-eu-west-1a
-
-  DefaultPrivateRoute1:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable1
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGateway1
-
-  PrivateSubnet1RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable1
-      SubnetId: !Ref PrivateSubnet1
-
-  PrivateRouteTable2:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-private-route-table-eu-west-1b
-
-  DefaultPrivateRoute2:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable2
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGateway2
-
-  PrivateSubnet2RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable2
-      SubnetId: !Ref PrivateSubnet2
-
-  NetworkLoadBalancer:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      LoadBalancerAttributes:
-        - Key: load_balancing.cross_zone.enabled
-          Value: true
-      Scheme: internet-facing
-      Subnets:
-        - !Ref PublicSubnet1
-        - !Ref PublicSubnet2
-      Type: network
-  #############################################################################
   CollatorSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -260,18 +82,18 @@ Resources:
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 60
-      VpcId: !Ref VPC
-      
+      VpcId: !ImportValue VpcId
+
   CollatorNetworkLoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref CollatorTargetGroup
-      LoadBalancerArn: !Ref NetworkLoadBalancer
+      LoadBalancerArn: !ImportValue NetworkLoadBalancerArn
       Port: 22
-      Protocol: TCP        
-        
+      Protocol: TCP
+
   MountTargetSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -285,36 +107,6 @@ Resources:
         CidrIp: 0.0.0.0/0
 
 Outputs:
-  VpcId:
-    Description: VPC id
-    Value: !Ref VPC
-    Export:
-      Name: VpcId
-
-  PrivateSubnet1Id:
-    Description: Id of the private subnet in the 1st Availability Zone
-    Value: !Ref PrivateSubnet1
-    Export:
-      Name: CollatorPrivateSubnet1Id
-
-  PrivateSubnet2Id:
-    Description: Id of the private subnet in the 2nd Availability Zone
-    Value: !Ref PrivateSubnet2
-    Export:
-      Name: CollatorPrivateSubnet2Id
-
-  PublicSubnet1Id:
-    Description: Id of the public subnet in the 1st Availability Zone
-    Value: !Ref PublicSubnet1
-    Export:
-      Name: CollatorPublicSubnet1Id
-
-  PublicSubnet2Id:
-    Description: Id of the public subnet in the 2nd Availability Zone
-    Value: !Ref PublicSubnet2
-    Export:
-      Name: CollatorPublicSubnet2Id
-
   CollatorTargetGroupArn:
     Description: Target group id of the collators
     Value: !Ref CollatorTargetGroup

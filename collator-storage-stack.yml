@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Shared cloud storage resources - targets eu-west-1
+
+Resources:
+  FileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      PerformanceMode: generalPurpose
+      Encrypted: true
+      LifecyclePolicies:
+        - TransitionToIA: AFTER_30_DAYS
+        - TransitionToPrimaryStorageClass: AFTER_1_ACCESS
+      FileSystemTags:
+      - Key: Name
+        Value: !Sub ${AWS::StackName}-file-system
+  
+  MountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: !ImportValue PrivateSubnet1Id
+      SecurityGroups:
+        - !ImportValue MountTargetSecurityGroupId
+
+  MountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: !ImportValue PrivateSubnet2Id
+      SecurityGroups:
+        - !ImportValue MountTargetSecurityGroupId
+
+Outputs:
+  FileSystemId:
+    Description: Id of the shared elastic file system shared within the collator cluster
+    Value: !Ref FileSystem
+    Export:
+      Name: CollatorFileSystemId
+
+  MountTarget1Id:
+    Description: EFS mount target 1 id
+    Value: !Ref MountTarget1
+    Export:
+      Name: CollatorMountTarget1Id
+
+  MountTarget2Id:
+    Description: EFS mount target 2 id
+    Value: !Ref MountTarget2
+    Export:
+      Name: CollatorMountTarget2Id

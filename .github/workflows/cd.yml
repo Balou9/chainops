@@ -21,7 +21,7 @@ on:
 
 env: # primary configuration touchpoint
   AWS_REGION: eu-west-1 # ireland
-  CFN_TEMPLATES: "core-network-stack.yml\ncollator-setup-stack.yml\ncollator-network-stack.yml\ncollator-auxiliary-stack.yml\ncollator-core-stack.yml\ncollator-monitoring-stack.yml\n"
+  CFN_TEMPLATES: "core-network-stack.yml\ncollator-setup-stack.yml\ncollator-network-stack.yml\ncollator-storage-stack.yml\ncollator-core-stack.yml\ncollator-monitoring-stack.yml\n"
   RELAY_CHAIN_NODE_P2P_PORT: 33334
   COLLATOR_P2P_PORT: 33333
   COLLATOR_HTTP_PORT: 1833
@@ -41,7 +41,7 @@ jobs:
           if [[ ${{ github.ref }} == *main ]]; then
             echo "ENVIRONMENT=prod" >> $GITHUB_ENV
             echo "NETWORK_STACK_NAME=prod-collator-network" >> $GITHUB_ENV
-            echo "AUXILIARY_STACK_NAME=prod-collator-auxiliary" >> $GITHUB_ENV
+            echo "STORAGE_STACK_NAME=prod-collator-storage" >> $GITHUB_ENV
             echo "COLLATOR_STACK_NAME=prod-collator-core" >> $GITHUB_ENV
             printf \
               "[default]\naws_access_key_id=%s\naws_secret_access_key=%s\n" \
@@ -51,7 +51,7 @@ jobs:
           else
             echo "ENVIRONMENT=test" >> $GITHUB_ENV
             echo "NETWORK_STACK_NAME=test-collator-network" >> $GITHUB_ENV
-            echo "AUXILIARY_STACK_NAME=test-collator-auxiliary" >> $GITHUB_ENV
+            echo "STORAGE_STACK_NAME=test-collator-storage" >> $GITHUB_ENV
             echo "COLLATOR_STACK_NAME=test-collator-core" >> $GITHUB_ENV
             printf \
               "[default]\naws_access_key_id=%s\naws_secret_access_key=%s\n" \
@@ -86,12 +86,12 @@ jobs:
             --capabilities=CAPABILITY_IAM \
             --no-fail-on-empty-changeset
 
-      - name: Deploy the auxiliary stack
-        if: contains(steps.changed-files.outputs.all_changed_files, 'auxiliary-stack.yml')
+      - name: Deploy the storage stack
+        if: contains(steps.changed-files.outputs.all_changed_files, 'storage-stack.yml')
         run: |
           aws cloudformation deploy \
-            --stack-name=${{ env.AUXILIARY_STACK_NAME }} \
-            --template-file=./auxiliary-stack.yml \
+            --stack-name=${{ env.STORAGE_STACK_NAME }} \
+            --template-file=./storage-stack.yml \
             --parameter-overrides \
               PrivateSubnet1Id=${{ TODO }} \
               PrivateSubnet2Id=${{ TODO }} \
