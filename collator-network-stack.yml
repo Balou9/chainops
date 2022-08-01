@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-Description: Collator cloud networking resources - targets eu-west-1
+Description: Collator cloud networking resources
 
 Parameters:
   RelaychainNodeP2pPort:

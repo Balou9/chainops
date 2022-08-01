@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 
-Description: Core cloud networking resources - targets eu-west-1
+Description: Core cloud networking resources
 
 Resources:
   VPC:
